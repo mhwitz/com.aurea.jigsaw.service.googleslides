@@ -140,7 +140,7 @@
 							<relocations>
 								<relocation>
 									<pattern>com.google.common</pattern>
-									<shadedPattern>com.aurea.jigsaw.service.ZenDeskGSheet.shaded.guava</shadedPattern>
+									<shadedPattern>com.aurea.jigsaw.connectors.GoogleSlides.shaded.guava</shadedPattern>
 								</relocation>
 								<!-- Add more relocations if necessary -->
 							</relocations>
