@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd"
+	xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>com.aurea.jiqsaw.connectors</groupId>
+	<artifactId>GoogleSlides</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<name>Google Slides Service</name>
+	<description>Enables creating Google Slides from input data</description>
+	<packaging>esbstyp</packaging>
+
+	<properties>
+		<sonicesb.version>12.0.3</sonicesb.version>
+		<sonicesb-plugin.version>12.0.3</sonicesb-plugin.version>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<maven.compiler.source>1.8</maven.compiler.source>
+		<maven.compiler.target>1.8</maven.compiler.target>
+	</properties>
+
+	<repositories>
+		<repository>
+			<id>sonic-releases</id>
+			<url>https://int-factory.aurea.com/nexus/content/repositories/sonic-releases</url>
+			<releases>
+				<enabled>true</enabled>
+			</releases>
+			<snapshots>
+				<enabled>false</enabled>
+			</snapshots>
+		</repository>
+	</repositories>
+	<pluginRepositories>
+		<pluginRepository>
+			<id>sonic-releases</id>
+			<url>https://int-factory.aurea.com/nexus/content/repositories/sonic-releases</url>
+			<releases>
+				<enabled>true</enabled>
+			</releases>
+			<snapshots>
+				<enabled>false</enabled>
+			</snapshots>
+		</pluginRepository>
+	</pluginRepositories>
+
+	<dependencies>
+		<dependency>
+			<groupId>com.aurea.sonic.esb</groupId>
+			<artifactId>sonicesb-dependencies</artifactId>
+			<version>${sonicesb.version}</version>
+			<type>pom</type>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.11</version>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- Google Maven -->
+				<dependency>
+			<groupId>com.google.guava</groupId>
+			<artifactId>guava</artifactId>
+			<version>19.0</version>
+		</dependency>
+
+		<!-- Google Drive API client library -->
+		<dependency>
+			<groupId>com.google.apis</groupId>
+			<artifactId>google-api-services-drive</artifactId>
+			<version>v3-rev160-1.23.0</version>
+		</dependency>
+		
+    <dependency>
+        <groupId>com.google.apis</groupId>
+        <artifactId>google-api-services-slides</artifactId>
+        <version>v1-rev398-1.25.0</version>
+    </dependency>		
+
+		<dependency>
+			<groupId>com.google.api-client</groupId>
+			<artifactId>google-api-client</artifactId>
+			<version>1.23.0</version>
+		</dependency>
+
+		<!-- Google OAuth client library -->
+		<dependency>
+			<groupId>com.google.oauth-client</groupId>
+			<artifactId>google-oauth-client-jetty</artifactId>
+			<version>1.23.0</version>
+		</dependency>
+
+		<!-- Google Auth Libraries -->
+		<dependency>
+			<groupId>com.google.auth</groupId>
+			<artifactId>google-auth-library-credentials</artifactId>
+			<version>0.9.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.google.auth</groupId>
+			<artifactId>google-auth-library-oauth2-http</artifactId>
+			<version>0.9.0</version>
+		</dependency>
+		
+
+		
+		<dependency>
+			<groupId>com.google.apis</groupId>
+			<artifactId>google-api-services-drive</artifactId>
+			<version>v3-rev160-1.23.0</version>
+		</dependency>
+
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>com.aurea.maven.plugins</groupId>
+				<artifactId>sonicesb-maven-plugin</artifactId>
+				<version>${sonicesb-plugin.version}</version>
+				<extensions>true</extensions>
+				<configuration>
+					<copyXarToDeploy>true</copyXarToDeploy>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+</project>

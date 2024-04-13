@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<serviceType xmlns="http://www.sonicsw.com/sonicxq" name="GoogleSlides" factoryClass="com.aurea.jiqsaw.connectors.GoogleSlides" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sonicsw.com/sonicxq file:///C:/Sonic/ESB7.6/schema/serviceType.xsd">
+	<validParams>
+    	<runtime>
+    	    <stringParam name="securityFilePath"></stringParam>
+    	    <stringParam name="baseFolderId"></stringParam>
+    	    <stringParam name="applicationName"></stringParam>
+    	    <stringParam name="slideName"></stringParam>
+    	</runtime>
+	</validParams>	
+	<classLoading>
+	    <serviceType>
+	        <classpath_list>
+	            <classpath>sonicfs:///workspace/GoogleSlides/lib/custom-services-classes.jar</classpath>
+	        </classpath_list>
+	    </serviceType>
+	</classLoading>
+</serviceType>
