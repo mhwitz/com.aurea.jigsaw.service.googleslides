@@ -126,6 +126,32 @@
 					<copyXarToDeploy>true</copyXarToDeploy>
 				</configuration>
 			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-shade-plugin</artifactId>
+				<version>3.2.4</version> <!-- Use the latest version available -->
+				<executions>
+					<execution>
+						<phase>install</phase>
+						<goals>
+							<goal>shade</goal>
+						</goals>
+						<configuration>
+							<relocations>
+								<relocation>
+									<pattern>com.google.common</pattern>
+									<shadedPattern>com.aurea.jigsaw.service.ZenDeskGSheet.shaded.guava</shadedPattern>
+								</relocation>
+								<!-- Add more relocations if necessary -->
+							</relocations>
+							<!-- Main class configuration (if needed) can be added here -->
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			
+			
+			
 		</plugins>
 	</build>
 </project>
