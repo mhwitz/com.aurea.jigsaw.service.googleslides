@@ -14,7 +14,9 @@
 	    </init>
     	<runtime>
     	    <stringParam name="PresentationName"></stringParam>
-    	    <stringParam name="PathToFile"></stringParam>
+    	    <stringParam name="DataLocation"></stringParam>
+    	    <stringParam name="DataType"></stringParam>
+    	    <stringParam name="SheetRange"></stringParam>
     	</runtime>
 	</validParams>	
 	<classLoading>
