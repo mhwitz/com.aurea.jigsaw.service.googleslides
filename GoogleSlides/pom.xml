@@ -82,7 +82,7 @@
 		<dependency>
 			<groupId>com.google.api-client</groupId>
 			<artifactId>google-api-client</artifactId>
-			<version>1.23.0</version>
+			<version>1.25.1</version>
 		</dependency>
 
 		<!-- Google OAuth client library -->
@@ -140,7 +140,7 @@
 							<relocations>
 								<relocation>
 									<pattern>com.google.common</pattern>
-									<shadedPattern>com.aurea.jigsaw.connectors.GoogleSlides.shaded.guava</shadedPattern>
+									<shadedPattern>com.aurea.jigsaw.connectors.GoogeSlides.shaded.guava</shadedPattern>
 								</relocation>
 								<!-- Add more relocations if necessary -->
 							</relocations>
