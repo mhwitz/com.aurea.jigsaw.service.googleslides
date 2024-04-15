@@ -18,6 +18,7 @@
     	    <stringParam name="DataType"></stringParam>
     	    <stringParam name="SheetRange"></stringParam>
     	    <stringParam name="delete"></stringParam>
+    	    <stringParam name="TemplateName"></stringParam>
     	</runtime>
 	</validParams>	
 	<classLoading>

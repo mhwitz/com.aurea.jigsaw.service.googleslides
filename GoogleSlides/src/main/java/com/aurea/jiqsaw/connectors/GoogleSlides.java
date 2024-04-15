@@ -42,6 +42,7 @@ import com.google.api.services.slides.v1.model.CreateShapeRequest;
 import com.google.api.services.slides.v1.model.CreateSlideRequest;
 import com.google.api.services.slides.v1.model.CreateSlideResponse;
 import com.google.api.services.slides.v1.model.Dimension;
+import com.google.api.services.slides.v1.model.DuplicateObjectRequest;
 import com.google.api.services.slides.v1.model.InsertTextRequest;
 import com.google.api.services.slides.v1.model.LayoutReference;
 import com.google.api.services.slides.v1.model.OpaqueColor;
@@ -67,6 +68,7 @@ import com.google.api.services.slides.v1.model.TextRun;
 import com.google.api.services.slides.v1.model.TextStyle;
 import com.google.api.services.slides.v1.model.UpdateParagraphStyleRequest;
 import com.google.api.services.slides.v1.model.UpdateShapePropertiesRequest;
+import com.google.api.services.slides.v1.model.UpdateSlidesPositionRequest;
 import com.google.api.services.slides.v1.model.UpdateTextStyleRequest;
 
 import java.io.FileInputStream;
@@ -123,6 +125,7 @@ public class GoogleSlides extends AbstractSFCServiceImpl {
         Drive driveService = null;
         Sheets sheetsService = null;
         Slides slidesService = null;
+        String templateName = null;
         
 		securityFilePath = parms.getParameter("SecurityFilePath", null);
 		folderId = parms.getParameter("FolderId", null);
@@ -132,7 +135,7 @@ public class GoogleSlides extends AbstractSFCServiceImpl {
 		dataLocation = parms.getParameter("DataLocation", null);
 		sheetRange = parms.getParameter("SheetRange", null);
 		String deleteFile = parms.getParameter("delete", null);
-		
+		templateName = parms.getParameter("TemplateName", null);		
 		//from spreadsheet or textfile?
 		
 		
@@ -156,6 +159,14 @@ public class GoogleSlides extends AbstractSFCServiceImpl {
 
 	        slidesService = getSlideService(securityFilePath, applicationName);
 	        sheetsService = getSheetsService(securityFilePath, applicationName);
+	        if (templateName != null) {
+	        	// create new presentation based on this template
+	        	List<Integer> slideIndices = Arrays.asList(0, 1, 2);
+	        	presentationId = createPresentationFromTemplate(slidesService,templateName, slideIndices );
+	        	movePresentation(driveService, slidesService,presentationId, folderId);
+	            _ctx.addIncomingToOutbox();
+	            return;
+	        }
 	        presentationId = createPresentation(driveService, folderId, presentationName);
 	        createSlides(slidesService, sheetsService, presentationName, presentationId, applicationName, dataType, dataLocation, sheetRange);
 			presenationFile = movePresentation(driveService, slidesService, presentationId, folderId);
@@ -1156,6 +1167,101 @@ public class GoogleSlides extends AbstractSFCServiceImpl {
                         .setFields("*")));
 
         // Execute the requests to add elements to the slide
+        slidesService.presentations().batchUpdate(presentationId,
+                new BatchUpdatePresentationRequest().setRequests(requests)).execute();
+    }
+    public static String createPresentationFromTemplate(Slides slidesService, String templatePresentationId, List<Integer> slideIndices) throws IOException {
+        // Create a new presentation
+        Presentation newPresentation = new Presentation()
+                .setTitle("New Presentation");
+        newPresentation = slidesService.presentations().create(newPresentation).execute();
+        String newPresentationId = newPresentation.getPresentationId();
+
+        // Retrieve the template presentation
+        Presentation templatePresentation = slidesService.presentations().get(templatePresentationId).execute();
+
+        // Create requests to copy the specified slides from the template presentation
+        List<Request> requests = new ArrayList<>();
+        for (Integer slideIndex : slideIndices) {
+            String slideObjectId = templatePresentation.getSlides().get(slideIndex).getObjectId();
+            if (slideObjectId.length() < 5) continue;
+            requests.add(new Request()
+                    .setCreateSlide(new CreateSlideRequest()
+                            .setObjectId(slideObjectId)
+                            .setInsertionIndex(requests.size())));
+        }
+
+        // Execute the batch update to copy the slides to the new presentation
+        slidesService.presentations().batchUpdate(newPresentationId,
+                new BatchUpdatePresentationRequest().setRequests(requests)).execute();
+
+        return newPresentationId;
+    }
+    
+    public static void addTextToTextBox(Slides slidesService, String presentationId, String textBoxObjectId, String text) throws IOException {
+        List<Request> requests = new ArrayList<>();
+
+        // Add the text to the text box
+        requests.add(new Request()
+                .setInsertText(new InsertTextRequest()
+                        .setObjectId(textBoxObjectId)
+                        .setInsertionIndex(0)
+                        .setText(text)));
+
+        // Update the text style (optional)
+        requests.add(new Request()
+                .setUpdateTextStyle(new UpdateTextStyleRequest()
+                        .setObjectId(textBoxObjectId)
+                        .setTextRange(new Range()
+                                .setType("ALL"))
+                        .setStyle(new TextStyle()
+                                .setFontSize(new Dimension().setMagnitude(12.0).setUnit("PT"))
+                                .setBold(true)
+                                .setForegroundColor(new OptionalColor()
+                                        .setOpaqueColor(new OpaqueColor()
+                                                .setRgbColor(new RgbColor()
+                                                        .setRed((float) 0.0)
+                                                        .setGreen((float) 0.0)
+                                                        .setBlue((float) 0.0)))))
+                        .setFields("fontSize,bold,foregroundColor")));
+
+        // Execute the batch update
+        slidesService.presentations().batchUpdate(presentationId,
+                new BatchUpdatePresentationRequest().setRequests(requests)).execute();
+    }
+    public static void addSlidesToPresentation(Slides slidesService, String presentationId, String templateSlideObjectId, int numberOfSlides) throws IOException {
+        List<Request> requests = new ArrayList<>();
+
+        // Retrieve the presentation
+        Presentation presentation = slidesService.presentations().get(presentationId).execute();
+
+        // Find the index of the template slide
+        int templateSlideIndex = -1;
+        for (int i = 0; i < presentation.getSlides().size(); i++) {
+            if (presentation.getSlides().get(i).getObjectId().equals(templateSlideObjectId)) {
+                templateSlideIndex = i;
+                break;
+            }
+        }
+
+        if (templateSlideIndex == -1) {
+            throw new IllegalArgumentException("Template slide not found in the presentation.");
+        }
+
+        // Create requests to add new slides based on the template slide
+        for (int i = 0; i < numberOfSlides; i++) {
+            requests.add(new Request()
+                    .setDuplicateObject(new DuplicateObjectRequest()
+                            .setObjectId(templateSlideObjectId)
+                            .setObjectIds(Collections.singletonMap(templateSlideObjectId, templateSlideObjectId + "_" + i))));
+
+            requests.add(new Request()
+                    .setUpdateSlidesPosition(new UpdateSlidesPositionRequest()
+                            .setInsertionIndex(templateSlideIndex + i + 1)
+                            .setSlideObjectIds(Collections.singletonList(templateSlideObjectId + "_" + i))));
+        }
+
+        // Execute the batch update
         slidesService.presentations().batchUpdate(presentationId,
                 new BatchUpdatePresentationRequest().setRequests(requests)).execute();
     }
