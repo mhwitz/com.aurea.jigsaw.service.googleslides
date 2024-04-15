@@ -24,6 +24,8 @@ import com.google.auth.oauth2.ServiceAccountCredentials;
 
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.model.File;
+import com.google.api.services.drive.model.Permission;
+import com.google.api.services.drive.model.PermissionList;
 import com.google.api.services.sheets.v4.Sheets;
 import com.google.api.services.sheets.v4.SheetsScopes;
 import com.google.api.client.util.store.FileDataStoreFactory;
@@ -55,8 +57,10 @@ import com.google.api.services.slides.v1.model.Request;
 import com.google.api.services.slides.v1.model.Response;
 import com.google.api.services.slides.v1.model.RgbColor;
 import com.google.api.services.slides.v1.model.Shape;
+import com.google.api.services.slides.v1.model.ShapeBackgroundFill;
 import com.google.api.services.slides.v1.model.ShapeProperties;
 import com.google.api.services.slides.v1.model.Size;
+import com.google.api.services.slides.v1.model.SolidFill;
 import com.google.api.services.slides.v1.model.TextContent;
 import com.google.api.services.slides.v1.model.TextElement;
 import com.google.api.services.slides.v1.model.TextRun;
@@ -88,7 +92,11 @@ import java.util.stream.Collectors;
  */
 public class GoogleSlides extends AbstractSFCServiceImpl {
 	
-    private  final String APPLICATION_NAME = "Google Slides";
+	private static String imageID = "https://drive.google.com/uc?id=13KZOOhxpEb7H0MYxQGjS9EMXk7k2owZE";
+    private static final String LOGO_IMAGE_URL = imageID;
+	private static final String RIGHT_IMAGE_URL =imageID;
+	private static final String TOP_RIGHT_IMAGE_URL = imageID;
+	private  final String APPLICATION_NAME = "Google Slides";
     private  final JsonFactory JSON_FACTORY = JacksonFactory.getDefaultInstance();
     private  final String TOKENS_DIRECTORY_PATH = "tokens";
     private  final List<String> SCOPES = Arrays.asList(SlidesScopes.PRESENTATIONS, DriveScopes.DRIVE);
@@ -123,11 +131,29 @@ public class GoogleSlides extends AbstractSFCServiceImpl {
 		dataType = parms.getIntParameter("DataType");
 		dataLocation = parms.getParameter("DataLocation", null);
 		sheetRange = parms.getParameter("SheetRange", null);
+		String deleteFile = parms.getParameter("delete", null);
+		
 		//from spreadsheet or textfile?
 		
 		
         try {
 			driveService = getDriveService(securityFilePath, applicationName);
+			if (deleteFile != null) {
+				boolean success = deleteSheet(driveService, deleteFile);
+				
+		        final XQMessage message = _envelope.getMessage();
+		        try {
+					message.setBooleanHeader("File Deleted", success);
+				} catch (XQMessageException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+		        
+		        _ctx.addIncomingToOutbox();
+
+				return;
+			}
+
 	        slidesService = getSlideService(securityFilePath, applicationName);
 	        sheetsService = getSheetsService(securityFilePath, applicationName);
 	        presentationId = createPresentation(driveService, folderId, presentationName);
@@ -156,7 +182,61 @@ public class GoogleSlides extends AbstractSFCServiceImpl {
         
         _ctx.addIncomingToOutbox();
     }
-    private static String createPresentation(Drive driveService, String folderId, String presentationName) throws IOException {
+    
+    public static void changeSheetOwner(Drive driveService, String sheetId, String newOwnerEmail) {
+        try {
+            // Get the current permissions on the sheet
+            PermissionList permissions = driveService.permissions().list(sheetId)
+                    .setFields("permissions(id, emailAddress, role)")
+                    .execute();
+
+            // Find the permission for the current owner
+            String currentOwnerId = null;
+            for (Permission permission : permissions.getPermissions()) {
+                if (permission.getRole().equals("owner")) {
+                    currentOwnerId = permission.getId();
+                    break;
+                }
+            }
+
+            if (currentOwnerId != null) {
+                // Create a new permission for the new owner
+                Permission newOwnerPermission = new Permission()
+                        .setType("user")
+                        .setRole("owner")
+                        .setEmailAddress(newOwnerEmail);
+
+                // Transfer ownership to the new owner
+                driveService.permissions().create(sheetId, newOwnerPermission)
+                        .setTransferOwnership(true)
+                        .execute();
+
+                // Remove the previous owner's permission
+                driveService.permissions().delete(sheetId, currentOwnerId).execute();
+
+                System.out.println("Sheet owner changed successfully.");
+            } else {
+                System.out.println("Current owner not found.");
+            }
+        } catch (IOException e) {
+            System.out.println("Error changing sheet owner: " + e.getMessage());
+        }
+    }
+
+
+
+	public static Boolean deleteSheet(Drive driveService, String sheetId) {
+		boolean success = true;
+		try {
+			// Delete the sheet file
+			driveService.files().delete(sheetId).execute();
+		} catch (IOException e) {
+			System.out.println("Error deleting sheet: " + e.getMessage());
+			success = false;
+		}
+		return success;
+	}
+   private static String createPresentation(Drive driveService, String folderId, String presentationName) throws IOException {
         File fileMetadata = new File();
         fileMetadata.setName(presentationName);
         fileMetadata.setMimeType("application/vnd.google-apps.presentation");
@@ -165,8 +245,10 @@ public class GoogleSlides extends AbstractSFCServiceImpl {
         File file = driveService.files().create(fileMetadata)
                 .setFields("id, webViewLink")
                 .execute();
-
-        return file.getId();
+        String fileId = file.getId();
+        //changeSheetOwner(driveService, fileId, "horowitz@aurea.com");
+        		
+        return fileId; 
     }
     
     private static Presentation getPresentation(Slides slidesService, String presentationId) throws IOException {
@@ -177,7 +259,8 @@ public class GoogleSlides extends AbstractSFCServiceImpl {
     	
         Presentation presentation = getPresentation(slidesService, presentationId);
         //Create Cover Page
-        addSlideWithText(slidesService, presentationId, "Cover Page", Collections.emptyList(), true );
+        createMasterSlide(slidesService, presentationId, "This Presentation is about the Product Hub");
+        //addSlideWithText(slidesService, presentationId, "Cover Page", Collections.emptyList(), true );
 
         // Is data from a text file or from a spreadsheet
         
@@ -231,10 +314,10 @@ public class GoogleSlides extends AbstractSFCServiceImpl {
                     "More Data Point 2",
                     "More Data Point 3"
             );     
-            addSlideWithText(slidesService, presentationId, slide1Title,slide0Content, false );
-            addSlideWithText(slidesService, presentationId, slide2Title,slide1Content, false );
-            addSlideWithText(slidesService, presentationId, slide3Title,slide2Content, false );
-            addSlideWithText(slidesService, presentationId, slide4Title,slide3Content, false );
+            //addSlideWithText(slidesService, presentationId, slide1Title,slide0Content, false );
+            //addSlideWithText(slidesService, presentationId, slide2Title,slide1Content, false );
+            //addSlideWithText(slidesService, presentationId, slide3Title,slide2Content, false );
+            //addSlideWithText(slidesService, presentationId, slide4Title,slide3Content, false );
         	
         		
         }
@@ -260,8 +343,17 @@ public class GoogleSlides extends AbstractSFCServiceImpl {
 	            .get(file.getId())
 	            .execute();
 
+//	    Permission permission = new Permission()
+//	    		.setType("user")
+//	    		.setRole("owner")
+//	    		.setEmailAddress("horowitz@aurea.com");
+//	    driveService.permissions().create(presentationId, permission)
+//	    		.setTransferOwnership(true)
+//	    		.execute();
+	    
 	    // Return the webViewLink of the moved presentation
-	    return file.getWebViewLink();
+	    String webViewLink = file.getWebViewLink();
+	    return webViewLink;
 	}
 
     private static  Slides getSlideService(String jsonPath, String applicationName) throws GeneralSecurityException, IOException {
@@ -877,59 +969,194 @@ public class GoogleSlides extends AbstractSFCServiceImpl {
         System.out.println("Slide created with ID: " + slideId);
     }
 
-//private void fromPerplexity(Slides slidesService, String presentationId) {
-//    // Add a new slide to the presentation
-//    CreateSlideRequest createSlideRequest = new CreateSlideRequest();
-//    createSlideRequest.setSlideLayoutReference(new LayoutReference().setPredefinedLayout("BLANK"));
-//    CreateSlideResponse createSlideResponse = slidesService.presentations().pages()
-//            .create(presentationId, createSlideRequest)
-//            .execute();
-//    String pageId = createSlideResponse.getObjectId();
-//
-//    // Add the data from the Google Sheet to the slide
-//    List<TextContent> textContents = Arrays.asList(
-//            new TextContent().set  .setText((String) values.get(0).get(0)),
-//            new TextContent().setText((String) values.get(0).get(1)),
-//            new TextContent().setText((String) values.get(1).get(0)),
-//            new TextContent().setText((String) values.get(1).get(1))
-//    );
-//    List<TextElement> textElements = Arrays.asList(
-//            new TextElement().setTextRun(new TextRun().setContent(textContents.get(0).getText())),
-//            new TextElement().setTextRun(new TextRun().setContent(textContents.get(1).getText())),
-//            new TextElement().setTextRun(new TextRun().setContent(textContents.get(2).getText())),
-//            new TextElement().setTextRun(new TextRun().setContent(textContents.get(3).getText()))
-//    );
-//    List<ParagraphMarker> paragraphMarkers = Arrays.asList(
-//            new ParagraphMarker(),
-//            new ParagraphMarker(),
-//            new ParagraphMarker(),
-//            new ParagraphMarker()
-//    );
-//    List<Paragraph> paragraphs = Arrays.asList(
-//            new Paragraph().setElements(Collections.singletonList(textElements.get(0))).setParagraphMarker(paragraphMarkers.get(0)),
-//            new Paragraph().setElements(Collections.singletonList(textElements.get(1))).setParagraphMarker(paragraphMarkers.get(1)),
-//            new Paragraph().setElements(Collections.singletonList(textElements.get(2))).setParagraphMarker(paragraphMarkers.get(2)),
-//            new Paragraph().setElements(Collections.singletonList(textElements.get(3))).setParagraphMarker(paragraphMarkers.get(3))
-//    );
-//    List<Shape> shapes = Arrays.asList(
-//            new Shape().setText(new TextContent().setParagraphs(paragraphs.subList(0, 2))),
-//            new Shape().setText(new TextContent().setParagraphs(paragraphs.subList(2, 4)))
-//    );
-//    UpdateShapePropertiesRequest updateShapePropertiesRequest = new UpdateShapePropertiesRequest()
-//            .setObjectId(pageId)
-//            .setShapeId(shapes.get(0).getObjectId())
-//            .setShapeProperties(new ShapeProperties().setShapeType(ShapeType.TEXT_BOX));
-//    UpdateShapePropertiesRequest updateShapePropertiesRequest2 = new UpdateShapePropertiesRequest()
-//            .setObjectId(pageId)
-//            .setShapeId(shapes.get(1).getObjectId())
-//            .setShapeProperties(new ShapeProperties().setShapeType(ShapeType.TEXT_BOX));
-//    slidesService.presentations().pages()
-//            .updateShapeProperties(presentationId, pageId, updateShapePropertiesRequest)
-//            .execute();
-//    slidesService.presentations().pages()
-//            .updateShapeProperties(presentationId, pageId, updateShapePropertiesRequest2)
-//            .execute();
-//
-//}
-    
+    public static void createMasterSlide(Slides slidesService, String presentationId, String title) throws IOException {
+        // Retrieve the presentation
+        //Presentation presentation = slidesService.presentations().get(presentationId).execute();
+
+        // Create a new slide
+        List<Request> requests = new ArrayList<>();
+        requests.add(new Request()
+                .setCreateSlide(new CreateSlideRequest()
+                        .setObjectId(presentationId)
+                        .setInsertionIndex(1)
+                        .setSlideLayoutReference(new LayoutReference().setPredefinedLayout("BLANK"))));
+
+        // Execute the request to create the slide
+        BatchUpdatePresentationResponse response = slidesService.presentations().batchUpdate(presentationId,
+                new BatchUpdatePresentationRequest().setRequests(requests)).execute();
+
+        // Get the ID of the newly created slide
+        String slideId = response.getReplies().get(0).getCreateSlide().getObjectId();
+
+        // Prepare the requests for adding elements to the slide
+        requests.clear();
+
+        // Add the white band at the top
+        requests.add(new Request()
+                .setCreateShape(new CreateShapeRequest()
+                        .setShapeType("RECTANGLE")
+                        .setElementProperties(new PageElementProperties()
+                                .setPageObjectId(slideId)
+                                .setSize(new Size()
+                                        .setWidth(new Dimension().setMagnitude(648.0).setUnit("PT"))
+                                        .setHeight(new Dimension().setMagnitude(36.0).setUnit("PT")))
+                                .setTransform(new AffineTransform()
+                                        .setScaleX(1.0)
+                                        .setScaleY(1.0)
+                                        .setTranslateX(0.0)
+                                        .setTranslateY(0.0)
+                                        .setUnit("PT")))));
+
+        // Add the logo image
+        requests.add(new Request()
+                .setCreateImage(new CreateImageRequest()
+                		.setObjectId("LOGO_IMAGE")
+                        .setUrl(LOGO_IMAGE_URL)
+                        .setElementProperties(new PageElementProperties()
+                                .setPageObjectId(slideId)
+                                .setSize(new Size()
+                                        .setWidth(new Dimension().setMagnitude(72.0).setUnit("PT"))
+                                        .setHeight(new Dimension().setMagnitude(36.0).setUnit("PT")))
+                                .setTransform(new AffineTransform()
+                                        .setScaleX(1.0)
+                                        .setScaleY(1.0)
+                                        .setTranslateX(576.0)
+                                        .setTranslateY(0.0)
+                                        .setUnit("PT")))));
+
+        // Add the light gray background
+        requests.add(new Request()
+                .setCreateShape(new CreateShapeRequest()
+                        .setShapeType("RECTANGLE")
+                        .setElementProperties(new PageElementProperties()
+                                .setPageObjectId(slideId)
+                                .setSize(new Size()
+                                        .setWidth(new Dimension().setMagnitude(648.0).setUnit("PT"))
+                                        .setHeight(new Dimension().setMagnitude(468.0).setUnit("PT")))
+                                .setTransform(new AffineTransform()
+                                        .setScaleX(1.0)
+                                        .setScaleY(1.0)
+                                        .setTranslateX(0.0)
+                                        .setTranslateY(36.0)
+                                        .setUnit("PT")))));
+
+        // Add the right image
+        requests.add(new Request()
+                .setCreateImage(new CreateImageRequest()
+                		.setObjectId("RIGHT_IMAGE")
+                        .setUrl(RIGHT_IMAGE_URL)
+                        .setElementProperties(new PageElementProperties()
+                                .setPageObjectId(slideId)
+                                .setSize(new Size()
+                                        .setWidth(new Dimension().setMagnitude(144.0).setUnit("PT"))
+                                        .setHeight(new Dimension().setMagnitude(144.0).setUnit("PT")))
+                                .setTransform(new AffineTransform()
+                                        .setScaleX(1.0)
+                                        .setScaleY(1.0)
+                                        .setTranslateX(504.0)
+                                        .setTranslateY(144.0)
+                                        .setUnit("PT")))));
+
+        // Add the top right image
+        requests.add(new Request()
+                .setCreateImage(new CreateImageRequest()
+                		.setObjectId("TOP_RIGHT")
+                        .setUrl(TOP_RIGHT_IMAGE_URL)
+                        .setElementProperties(new PageElementProperties()
+                                .setPageObjectId(slideId)
+                                .setSize(new Size()
+                                        .setWidth(new Dimension().setMagnitude(72.0).setUnit("PT"))
+                                        .setHeight(new Dimension().setMagnitude(72.0).setUnit("PT")))
+                                .setTransform(new AffineTransform()
+                                        .setScaleX(1.0)
+                                        .setScaleY(1.0)
+                                        .setTranslateX(576.0)
+                                        .setTranslateY(72.0)
+                                        .setUnit("PT")))));
+
+        // Add the presentation title
+        String titleShapeId = "TitleShapeID";
+        requests.add(new Request()
+                .setCreateShape(new CreateShapeRequest()
+                		.setObjectId(titleShapeId)
+                        .setShapeType("TEXT_BOX")
+                        .setElementProperties(new PageElementProperties()
+                                .setPageObjectId(slideId)
+                                .setSize(new Size()
+                                        .setWidth(new Dimension().setMagnitude(360.0).setUnit("PT"))
+                                        .setHeight(new Dimension().setMagnitude(36.0).setUnit("PT")))
+                                .setTransform(new AffineTransform()
+                                        .setScaleX(1.0)
+                                        .setScaleY(1.0)
+                                        .setTranslateX(144.0)
+                                        .setTranslateY(144.0)
+                                        .setUnit("PT")))));
+
+        // Add the date at the bottom
+        String dateShapeId = "DateShapeID";
+        requests.add(new Request()
+                .setCreateShape(new CreateShapeRequest()
+                		.setObjectId(dateShapeId)
+                        .setShapeType("TEXT_BOX")
+                        .setElementProperties(new PageElementProperties()
+                                .setPageObjectId(slideId)
+                                .setSize(new Size()
+                                        .setWidth(new Dimension().setMagnitude(144.0).setUnit("PT"))
+                                        .setHeight(new Dimension().setMagnitude(18.0).setUnit("PT")))
+                                .setTransform(new AffineTransform()
+                                        .setScaleX(1.0)
+                                        .setScaleY(1.0)
+                                        .setTranslateX(36.0)
+                                        .setTranslateY(486.0)
+                                        .setUnit("PT")))));
+        
+     // Execute the batch update to create the shapes
+        BatchUpdatePresentationResponse shapeResponse = slidesService.presentations().batchUpdate(presentationId,
+                new BatchUpdatePresentationRequest().setRequests(requests)).execute();
+
+        // Get the object IDs of the created shapes
+       // String titleShapeId = shapeResponse.getReplies().get(2).getCreateShape().getObjectId();
+        //String dateShapeId = shapeResponse.getReplies().get(3).getCreateShape().getObjectId();
+        requests.clear();
+        
+        requests.add(new Request()
+                .setInsertText(new InsertTextRequest()
+                        .setObjectId(titleShapeId)
+                        .setInsertionIndex(0)
+                        .setText(title)));
+        requests.add(new Request()
+                .setUpdateTextStyle(new UpdateTextStyleRequest()
+                        .setObjectId(titleShapeId)
+                        .setTextRange(new Range()
+                                .setType("ALL"))
+                        .setStyle(new TextStyle()
+                                .setFontSize(new Dimension().setMagnitude(24.0).setUnit("PT"))
+                                .setBold(true))
+                        .setFields("*")));
+        
+        requests.add(new Request()
+                .setInsertText(new InsertTextRequest()
+                        .setObjectId(dateShapeId)
+                        .setInsertionIndex(0)
+                        .setText(java.time.LocalDate.now().toString())));
+        
+        requests.add(new Request()
+                .setUpdateTextStyle(new UpdateTextStyleRequest()
+                        .setObjectId(dateShapeId)
+                        .setTextRange(new Range()
+                                .setType("ALL"))
+                        .setStyle(new TextStyle()
+                                .setForegroundColor(new OptionalColor()
+                                        .setOpaqueColor(new OpaqueColor()
+                                                .setRgbColor(new RgbColor()
+                                                        .setRed(0.2f)
+                                                        .setGreen(0.2f)
+                                                        .setBlue(0.2f))))
+                                .setFontSize(new Dimension().setMagnitude(12.0).setUnit("PT")))
+                        .setFields("*")));
+
+        // Execute the requests to add elements to the slide
+        slidesService.presentations().batchUpdate(presentationId,
+                new BatchUpdatePresentationRequest().setRequests(requests)).execute();
+    }
 }

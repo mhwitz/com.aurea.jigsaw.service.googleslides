@@ -17,6 +17,7 @@
     	    <stringParam name="DataLocation"></stringParam>
     	    <stringParam name="DataType"></stringParam>
     	    <stringParam name="SheetRange"></stringParam>
+    	    <stringParam name="delete"></stringParam>
     	</runtime>
 	</validParams>	
 	<classLoading>
