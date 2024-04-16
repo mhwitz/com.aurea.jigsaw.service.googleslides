@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sid xmlns="http://www.sonicsw.com/sonicesb/sid"
+     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	  <service>
+		    <properties>
+			      <name>ESB Process</name>
+			      <type>esbp</type>			
+			      <namespace>http://www.sonicsw.com/sonicesb/sid</namespace>
+		    </properties>
+
+		    <interface name="ESBProcessInterface">
+			      <operation name="Invoke">
+				        <input name="Input">
+					          
+				           <part binding-info="name"
+                     binding-name="Part"
+                     is-wsdl-source="false"
+                     name="DefaultInput"
+                     namespace="http://www.w3.org/2001/XMLSchema"
+                     type="xsd:anyType"/>
+            </input>
+				        <output name="Output">
+					          
+				           <part binding-info="name"
+                     binding-name="Part"
+                     is-wsdl-source="false"
+                     name="DefaultOutput"
+                     namespace="http://www.w3.org/2001/XMLSchema"
+                     type="xsd:anyType"/>
+            </output>
+			      </operation>
+		    </interface>
+	  </service>
+   <esbp name="SlideTest"/>
+   <scenarios xmlns="http://sonic.esb.org/scenario/">
+      <scenario create-xq-info="Parameter-Based"
+                name="SlideTest_default"
+                type="ESBProcessInterface">
+         <scenario-operation name="Invoke">
+            <input-values>
+               <part-values name="DefaultInput">
+                  <input-property>Literal</input-property>
+                  <input-value>Test</input-value>
+                  <input-type>anyType [http://www.w3.org/2001/XMLSchema]</input-type>
+               </part-values>
+            </input-values>
+         </scenario-operation>
+         <run-on>Test ESBContainer RunHandler</run-on>
+         <problems/>
+      </scenario>
+   </scenarios>
+</sid>

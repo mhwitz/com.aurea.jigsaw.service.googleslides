@@ -1,0 +1,72 @@
+To find the object ID of a text box in a Google Slides presentation, you can use the Google Slides API to retrieve information about the presentation and its elements. Here's how you can find the object ID of a specific text box:
+
+Use the presentations.get method to retrieve the presentation details:
+java
+
+
+Copy code
+String presentationId = "your-presentation-id";
+Presentation presentation = slidesService.presentations().get(presentationId).execute();
+Iterate through the slides in the presentation to find the slide containing the text box:
+java
+
+
+Copy code
+List<Page> slides = presentation.getSlides();
+for (Page slide : slides) {
+    // Check each slide for the desired text box
+    List<PageElement> pageElements = slide.getPageElements();
+    for (PageElement element : pageElements) {
+        if (element.getShape() != null && "TEXT_BOX".equals(element.getShape().getShapeType())) {
+            // Found a text box element
+            String textBoxObjectId = element.getObjectId();
+            
+            // Check if the text box contains the desired text
+            String textBoxContent = element.getShape().getText().getTextElements().get(0).getTextRun().getContent();
+            if (textBoxContent.contains("your-desired-text")) {
+                // Found the specific text box you're looking for
+                System.out.println("Text Box Object ID: " + textBoxObjectId);
+                break;
+            }
+        }
+    }
+}
+In this code:
+
+We iterate through each slide in the presentation using presentation.getSlides().
+For each slide, we iterate through its page elements using slide.getPageElements().
+We check if the page element is a shape and if its shape type is "TEXT_BOX" using element.getShape() and element.getShape().getShapeType().
+If it's a text box, we retrieve its object ID using element.getObjectId().
+We also retrieve the text content of the text box using element.getShape().getText().getTextElements().get(0).getTextRun().getContent().
+If the text content contains the desired text (specified by "your-desired-text"), we consider it as the specific text box we're looking for.
+We print the object ID of the found text box.
+Note: Replace "your-presentation-id" with the actual ID of your presentation and "your-desired-text" with a unique substring or identifier that exists in the text content of the desired text box.
+
+Alternatively, if you know the slide index and the specific text content of the text box you want to modify, you can directly access the slide and find the text box without iterating through all the slides:
+
+java
+
+
+Copy code
+String presentationId = "your-presentation-id";
+Presentation presentation = slidesService.presentations().get(presentationId).execute();
+
+int slideIndex = 0; // Replace with the index of the slide containing the text box
+Slide slide = presentation.getSlides().get(slideIndex);
+
+List<PageElement> pageElements = slide.getPageElements();
+for (PageElement element : pageElements) {
+    if (element.getShape() != null && "TEXT_BOX".equals(element.getShape().getShapeType())) {
+        // Found a text box element
+        String textBoxContent = element.getShape().getText().getTextElements().get(0).getTextRun().getContent();
+        if (textBoxContent.contains("your-desired-text")) {
+            // Found the specific text box you're looking for
+            String textBoxObjectId = element.getObjectId();
+            System.out.println("Text Box Object ID: " + textBoxObjectId);
+            break;
+        }
+    }
+}
+In this case, replace slideIndex with the index of the slide that contains the text box you want to modify.
+
+Once you have the object ID of the text box, you can use it to update the text content or apply other modifications using the batchUpdate method as shown in the previous examples.

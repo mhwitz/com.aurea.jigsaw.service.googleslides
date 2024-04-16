@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xq:process xmlns:wsis="http://www.sonicsw.com/esb/service/invocation" xmlns:xq="http://www.sonicsw.com/sonicxq" name="SlideTest" processModelVersion="3.0" qualityOfService="BEST_EFFORT" timeToLive="0">
+  <xq:exitEndpoint_list>
+    <xq:exitEndpoint endpoint_ref="REPLY_TO" type="REPLY_TO"/>
+  </xq:exitEndpoint_list>
+  <xq:faultEndpoint endpoint_ref="REPLY_TO" type="REPLY_TO"/>
+  <xq:rejectEndpoint endpoint_ref="dev.RME" type="ENDPOINT"/>
+  <xq:itinerary>
+    <xq:step name="Service 1" type="SERVICE" endpoint_ref="GoogleSlidesTest">
+      <xq:params>
+        <xq:stringParam name="PresentationName">Product Hub Presentation</xq:stringParam>
+        <xq:stringParam name="DataLocation">ggg</xq:stringParam>
+        <xq:stringParam name="DataType">2</xq:stringParam>
+        <xq:stringParam name="TemplateName">1MFYf9s6_fyYF0ImOI6KHXv_DSDRvLwr4_8EqRnEQiHs</xq:stringParam>
+      </xq:params>
+    </xq:step>
+    <xq:exit name="Exit 1"/>
+  </xq:itinerary>
+  <xq:trackingDetails trackingLevel="0">
+    <xq:eventEndpoint endpoint_ref="dev.Tracking" type="ENDPOINT"/>
+    <xq:idGenerator class="com.sonicsw.xqimpl.service.accessor.ScriptEvaluator"/>
+  </xq:trackingDetails>
+  <xq:interface>
+    <xq:operation xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+      <xq:input name="Input">
+        <xq:parameter collection="false" name="DefaultInput" type="xsd:anyType">
+          <xq:esbBinding>
+            <xq:part contentId="name"/>
+          </xq:esbBinding>
+        </xq:parameter>
+      </xq:input>
+      <xq:output name="Output">
+        <xq:parameter collection="false" name="DefaultOutput" type="xsd:anyType">
+          <xq:esbBinding>
+            <xq:part contentId="name"/>
+          </xq:esbBinding>
+        </xq:parameter>
+      </xq:output>
+    </xq:operation>
+  </xq:interface>
+</xq:process>

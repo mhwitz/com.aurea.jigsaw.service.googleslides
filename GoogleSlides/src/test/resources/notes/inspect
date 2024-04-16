@@ -1,0 +1,32 @@
+Yes, you can visually inspect the presentation and find the object ID of a specific element, such as a text box, using the Google Slides UI. Here's how you can do it:
+
+Open the Google Slides presentation in your web browser.
+Click on the element (e.g., text box) that you want to find the object ID for. This will select the element.
+Right-click on the selected element and choose "Inspect" from the context menu. This will open the Developer Tools panel in your browser.
+In the Developer Tools panel, look for the HTML element that represents the selected element. It will typically have a class name related 
+to the element type (e.g., "text-box").
+Expand the HTML element by clicking on the small triangle icon next to it.
+Look for an attribute named "data-object-id" within the expanded HTML element. The value of this attribute is the object ID of the selected element.
+For example, if you inspect a text box element, you might see something like this in the Developer Tools panel:
+
+
+
+presentation template
+19n8eUNGA9PUf_jddyOGFU1tbeau83MIDd1hNW42zXgg
+
+Title Block  #g2cc8e0fd5a8_1_2
+Date Block g2cc8e0fd5a8_1_1
+
+Slide Info
+Slide TItle  g2ac92b69676_4_1
+Slide Data g2ac92b69676_4_2
+
+
+main location to find for inspect
+Text Body
+#g2672c79f211_1_8
+
+page on sheet
+Marketing Playbook – V2 
+data cell is j12
+
