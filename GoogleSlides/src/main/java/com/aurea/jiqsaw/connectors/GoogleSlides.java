@@ -10,6 +10,8 @@ import com.sonicsw.xq.XQMessageException;
 import com.sonicsw.xq.XQServiceException;
 import org.apache.log4j.Logger;
 
+import com.aurea.jiqsaw.connectors.ProductHub.Slide2Data;
+import com.aurea.jiqsaw.connectors.ProductHub.SlideData;
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
@@ -54,6 +56,7 @@ import com.google.api.services.slides.v1.model.ParagraphMarker;
 import com.google.api.services.slides.v1.model.ParagraphStyle;
 import com.google.api.services.slides.v1.model.Presentation;
 import com.google.api.services.slides.v1.model.Range;
+import com.google.api.services.slides.v1.model.ReplaceAllTextRequest;
 import com.google.api.services.slides.v1.model.Request;
 import com.google.api.services.slides.v1.model.Response;
 import com.google.api.services.slides.v1.model.RgbColor;
@@ -62,6 +65,7 @@ import com.google.api.services.slides.v1.model.ShapeBackgroundFill;
 import com.google.api.services.slides.v1.model.ShapeProperties;
 import com.google.api.services.slides.v1.model.Size;
 import com.google.api.services.slides.v1.model.SolidFill;
+import com.google.api.services.slides.v1.model.SubstringMatchCriteria;
 import com.google.api.services.slides.v1.model.TextContent;
 import com.google.api.services.slides.v1.model.TextElement;
 import com.google.api.services.slides.v1.model.TextRun;
@@ -79,6 +83,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
+import java.time.LocalDate;
 import java.time.temporal.ValueRange;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -103,6 +108,13 @@ public class GoogleSlides extends AbstractSFCServiceImpl {
     private  final String TOKENS_DIRECTORY_PATH = "tokens";
     private  final List<String> SCOPES = Arrays.asList(SlidesScopes.PRESENTATIONS, DriveScopes.DRIVE);
     private  final String CREDENTIALS_FILE_PATH = "/credentials.json";
+    
+    private static String TEMPLATE_PRESENTATION_ID = "your-template-presentation-id";
+    private static  String TITLE_TEXT_BOX_ID = "title-text-box-object-id";
+    private static  String DATE_TEXT_BOX_ID = "date-text-box-object-id";
+    private static  String SLIDE2_TITLE_TEXT_BOX_ID = "slide2-title-text-box-object-id";
+    private static  String SLIDE2_TEXT_BOX_ID = "slide2-text-box-object-id";
+
 
     // access to the SFC's logging mechanism
     private final Logger log = Logger.getLogger(this.getClass());
@@ -126,16 +138,20 @@ public class GoogleSlides extends AbstractSFCServiceImpl {
         Sheets sheetsService = null;
         Slides slidesService = null;
         String templateName = null;
+        String webViewLink = "-";
         
 		securityFilePath = parms.getParameter("SecurityFilePath", null);
 		folderId = parms.getParameter("FolderId", null);
 		applicationName = parms.getParameter("ApplicationName", null);
 		presentationName = parms.getParameter("PresentationName",null);
+		
 		dataType = parms.getIntParameter("DataType");
 		dataLocation = parms.getParameter("DataLocation", null);
+		templateName = parms.getParameter("TemplateName", null);
 		sheetRange = parms.getParameter("SheetRange", null);
+		
 		String deleteFile = parms.getParameter("delete", null);
-		templateName = parms.getParameter("TemplateName", null);		
+		
 		//from spreadsheet or textfile?
 		
 		
@@ -160,16 +176,80 @@ public class GoogleSlides extends AbstractSFCServiceImpl {
 	        slidesService = getSlideService(securityFilePath, applicationName);
 	        sheetsService = getSheetsService(securityFilePath, applicationName);
 	        if (templateName != null) {
+        	
 	        	// create new presentation based on this template
 	        	List<Integer> slideIndices = Arrays.asList(0, 1, 2);
-	        	presentationId = createPresentationFromTemplate(slidesService,templateName, slideIndices );
-	        	movePresentation(driveService, slidesService,presentationId, folderId);
+	        	
+	        	TEMPLATE_PRESENTATION_ID = templateName;
+	            TITLE_TEXT_BOX_ID = "g2cc8e0fd5a8_1_2";
+	            DATE_TEXT_BOX_ID = "g2cc8e0fd5a8_1_1";
+	            SLIDE2_TITLE_TEXT_BOX_ID = "g2ac92b69676_4_1";
+	            SLIDE2_TEXT_BOX_ID = "g2ac92b69676_4_2";
+	            String spreadsheetId = "1fZbaOmdHGqUo4H0cuKCNRfWWBygiMiAzRXv-eaPVSi4";
+	            String pageName = "MarketingPlaybook";
+	            String cellAddress = "J12";
+	            		
+	        	
+	        	ProductHub productHub = new ProductHub(TEMPLATE_PRESENTATION_ID,TITLE_TEXT_BOX_ID,DATE_TEXT_BOX_ID, SLIDE2_TITLE_TEXT_BOX_ID, SLIDE2_TEXT_BOX_ID);
+	        	String sheetValues = productHub.getGeneratedContent(sheetsService, spreadsheetId, pageName, cellAddress);
+	        	if (!sheetValues.contains("Slide 1")) {
+	        		sheetValues = "Slide 1: Introduction\r\n" + 
+	        				"- Overview of Kayako and its commitment to AI-driven customer support\r\n" + 
+	        				"- Brief introduction to the 3 key AI features that solve customer pain points\r\n" + 
+	        				"\r\n" + 
+	        				"Slide 2: AI-Powered Support Co-Pilot\r\n" + 
+	        				"- Explanation of the AI Co-Pilot feature and how it works\r\n" + 
+	        				"- Pain point: Agents struggling to find the right information quickly\r\n" + 
+	        				"- Benefit: Reduced response times and improved resolution accuracy\r\n" + 
+	        				"- Use case: An agent using AI Co-Pilot to quickly find a solution for a customer's issue\r\n" + 
+	        				"\r\n" + 
+	        				"Slide 3: Predictive Customer Insights\r\n" + 
+	        				"- Overview of the Predictive Customer Insights feature\r\n" + 
+	        				"- Pain point: Businesses lacking proactive insights to prevent churn and issues\r\n" + 
+	        				"- Benefit: Proactively addressing concerns before they escalate\r\n" + 
+	        				"- Use case: Identifying a customer at risk of churning and proactively reaching out\r\n" + 
+	        				"\r\n" + 
+	        				"Slide 4: Intelligent Automation Workflows\r\n" + 
+	        				"- Explanation of the Intelligent Automation Workflows feature\r\n" + 
+	        				"- Pain point: Manual, repetitive tasks consuming agents' time\r\n" + 
+	        				"- Benefit: Streamlined support processes and increased agent productivity\r\n" + 
+	        				"- Use case: Automatically categorizing and assigning inquiries to the right agents\r\n" + 
+	        				"\r\n" + 
+	        				"Slide 5: FAQ and Next Steps\r\n" + 
+	        				"- Address common questions about the AI features\r\n" + 
+	        				"- Provide information on how to get started with Kayako's AI-powered support\r\n" + 
+	        				"- Include a call-to-action for attendees to learn more or request a demo\r\n" + 
+	        				"\r\n" + 
+	        				"Slide 6: Q&A\r\n" + 
+	        				"- Open the floor for live questions from the webinar attendees\r\n" + 
+	        				"- Provide contact information for follow-up inquiries and further assistance";
+
+	        		System.out.println("Unable to obtain data from spreadsheet");
+//	        		throw new XQServiceException("Error obtaining data from spreadsheet");
+	        	}
+	        	SlideData[] slideDataArray = productHub.parseSlides(sheetValues);
+
+	        	String title = "AI Features Road Map";
+	        	//String spreadsheetId, String folderId, String newName
+	        	File newPresetation = productHub.copyAndRenameSpreadsheet(driveService, sheetsService, TEMPLATE_PRESENTATION_ID, folderId, presentationName);
+   	        	//Get the WebViewLnk for moved file
+	        	webViewLink = movePresentation(driveService, slidesService,newPresetation.getId(), folderId);
+       			presentationId = productHub.updatePresentation(newPresetation.getId(), slidesService, title, slideDataArray);
+       	        XQMessage message = _envelope.getMessage();
+       	        try {
+       	        	//String fileLink =
+       				message.setStringHeader("File Link", webViewLink);
+       			} catch (XQMessageException e) {
+       				// TODO Auto-generated catch block
+       				e.printStackTrace();
+       			}
+      			
 	            _ctx.addIncomingToOutbox();
 	            return;
 	        }
 	        presentationId = createPresentation(driveService, folderId, presentationName);
 	        createSlides(slidesService, sheetsService, presentationName, presentationId, applicationName, dataType, dataLocation, sheetRange);
-			presenationFile = movePresentation(driveService, slidesService, presentationId, folderId);
+	        webViewLink = movePresentation(driveService, slidesService, presentationId, folderId);
 
 		} catch (IOException e1) {
 			// TODO Auto-generated catch block
@@ -183,9 +263,10 @@ public class GoogleSlides extends AbstractSFCServiceImpl {
 
 
         // get the message from the envelope
-        final XQMessage message = _envelope.getMessage();
+        XQMessage message = _envelope.getMessage();
         try {
-			message.setStringHeader("File Link", presenationFile);
+				message.setStringHeader("File Link", webViewLink);
+
 		} catch (XQMessageException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -292,6 +373,12 @@ public class GoogleSlides extends AbstractSFCServiceImpl {
         	break;
         case 1:
         	//Slides slidesService, Sheets sheetsService, String spreadsheetId, String range, String presentationId, String slideTitle)
+//        	   TEMPLATE_PRESENTATION_ID = "your-template-presentation-id";
+//        	   TITLE_TEXT_BOX_ID = "title-text-box-object-id";
+//        	   DATE_TEXT_BOX_ID = "date-text-box-object-id";
+//        	   SLIDE2_TITLE_TEXT_BOX_ID = "slide2-title-text-box-object-id";
+//        	   SLIDE2_TEXT_BOX_ID = "slide2-text-box-object-id";
+
         	createSlideFromSheet(slidesService, sheetsService, dataLocation, sheetRange, presentationId, "slideTitle");
         	break;
         default:
