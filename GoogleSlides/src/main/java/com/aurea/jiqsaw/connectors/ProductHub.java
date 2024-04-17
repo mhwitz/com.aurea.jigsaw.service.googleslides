@@ -363,6 +363,27 @@ public class ProductHub {
             return textBoxValue;
         }
     }
+    public SlideData[] parseSlides2(String sheetValues) {
+        List<SlideData> slideDataList = new ArrayList<>();
+        String[] slides = sheetValues.split("\\r\\n\\r\\n");
+
+        for (String slide : slides) {
+            String[] lines = slide.split("\\r\\n");
+            String title = lines[0].split(": ")[1];
+            StringBuilder textBoxBuilder = new StringBuilder();
+
+            for (int i = 1; i < lines.length; i++) {
+                String line = lines[i];
+                if (line.startsWith("- ")) {
+                    textBoxBuilder.append("• ").append(line.substring(2)).append("\n");
+                }
+            }
+            SlideData slideData = new SlideData(title, textBoxBuilder.toString().trim());
+            slideDataList.add(slideData);
+        }
+
+        return slideDataList.toArray(new SlideData[0]);
+    }
 
     public SlideData[] parseSlides(String dataString) {
             List<SlideData> slideDataList = new ArrayList<>();
@@ -381,7 +402,7 @@ public class ProductHub {
 
                 if (titleMatcher.find() && textBoxMatcher.find()) {
                     String pageTitleValue = titleMatcher.group(1).trim();
-                    String textBoxValue = textBoxMatcher.group(0).trim().replace("- ", "").replace("\n", " ");
+                    String textBoxValue = textBoxMatcher.group(0).trim().replace("- ", "• ");
 
                     // Create a SlideData object and add it to the list
                     SlideData slideData = new SlideData(pageTitleValue, textBoxValue);
@@ -486,7 +507,7 @@ public class ProductHub {
 
     	return newPresentation;
     }
-    public File copyAndRenameSpreadsheet(Drive driveService, Sheets sheetsService, String spreadsheetId, String folderId, String newName) throws IOException {
+    public File copyAndRenameSpreadsheet(Drive driveService, Sheets sheetsService, String spreadsheetId, String folderId, String productName) throws IOException {
         // Copy the spreadsheet to the specified folder
    
         File fileMetadata = new File();
@@ -497,7 +518,7 @@ public class ProductHub {
 
         // Rename the copied spreadsheet
         File renamedFile = new File();
-        renamedFile.setName(newName);
+        renamedFile.setName(productName + " AI Roadmap");
         File updatedFile = driveService.files().update(copiedFile.getId(), renamedFile)
                 .setFields("id, name, webViewLink")
                 .execute();

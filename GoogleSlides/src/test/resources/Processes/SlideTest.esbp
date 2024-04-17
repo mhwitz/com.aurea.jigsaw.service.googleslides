@@ -6,12 +6,18 @@
   <xq:faultEndpoint endpoint_ref="REPLY_TO" type="REPLY_TO"/>
   <xq:rejectEndpoint endpoint_ref="dev.RME" type="ENDPOINT"/>
   <xq:itinerary>
-    <xq:step name="Service 1" type="SERVICE" endpoint_ref="GoogleSlidesTest">
+    <xq:transform name="Set Product Name">
+      <xq:messageMapping>
+        <xq:mapInput>
+          <xq:rule source="JigSaw" target="${esbpStepInMsg.headers['ProductName']}"/>
+        </xq:mapInput>
+      </xq:messageMapping>
+    </xq:transform>
+    <xq:step name="Product Hub" type="SERVICE" endpoint_ref="GoogleSlidesTest">
       <xq:params>
-        <xq:stringParam name="PresentationName">Product Hub Presentation</xq:stringParam>
-        <xq:stringParam name="DataLocation">ggg</xq:stringParam>
-        <xq:stringParam name="DataType">2</xq:stringParam>
+        <xq:stringParam name="DataType">3</xq:stringParam>
         <xq:stringParam name="TemplateName">1MFYf9s6_fyYF0ImOI6KHXv_DSDRvLwr4_8EqRnEQiHs</xq:stringParam>
+        <xq:stringParam name="ProductName">${esbmsg:header:ProductName}</xq:stringParam>
       </xq:params>
     </xq:step>
     <xq:exit name="Exit 1"/>

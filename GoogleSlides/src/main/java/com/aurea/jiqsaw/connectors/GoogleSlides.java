@@ -131,7 +131,7 @@ public class GoogleSlides extends AbstractSFCServiceImpl {
     public final void doService(final SFCServiceContext _ctx, final XQEnvelope _envelope) throws XQServiceException {
         // get the parameters from the Service Context
         final SFCParameters parms = _ctx.getParameters();
-        String securityFilePath, folderId, applicationName, presentationName, presentationId, dataLocation, sheetRange = null;
+        String securityFilePath, folderId, applicationName, productName, presentationId, dataLocation, sheetRange = null;
         int dataType = 0;
         String presenationFile = "";
         Drive driveService = null;
@@ -142,8 +142,14 @@ public class GoogleSlides extends AbstractSFCServiceImpl {
         
 		securityFilePath = parms.getParameter("SecurityFilePath", null);
 		folderId = parms.getParameter("FolderId", null);
-		applicationName = parms.getParameter("ApplicationName", null);
-		presentationName = parms.getParameter("PresentationName",null);
+		productName = parms.getParameter("ProductName",null);
+		try {
+			productName = _envelope.getMessage().getStringHeader("productname");
+		} catch (XQMessageException e2) {
+			// TODO Auto-generated catch block
+			e2.printStackTrace();
+		}
+		applicationName = "Application_" + productName; 
 		
 		dataType = parms.getIntParameter("DataType");
 		dataLocation = parms.getParameter("DataLocation", null);
@@ -229,16 +235,16 @@ public class GoogleSlides extends AbstractSFCServiceImpl {
 	        	}
 	        	SlideData[] slideDataArray = productHub.parseSlides(sheetValues);
 
-	        	String title = "AI Features Road Map";
+	        	String title = productName + "\nAI Features Roadmap";
 	        	//String spreadsheetId, String folderId, String newName
-	        	File newPresetation = productHub.copyAndRenameSpreadsheet(driveService, sheetsService, TEMPLATE_PRESENTATION_ID, folderId, presentationName);
+	        	File newPresetation = productHub.copyAndRenameSpreadsheet(driveService, sheetsService, TEMPLATE_PRESENTATION_ID, folderId, productName);
    	        	//Get the WebViewLnk for moved file
 	        	webViewLink = movePresentation(driveService, slidesService,newPresetation.getId(), folderId);
        			presentationId = productHub.updatePresentation(newPresetation.getId(), slidesService, title, slideDataArray);
        	        XQMessage message = _envelope.getMessage();
        	        try {
        	        	//String fileLink =
-       				message.setStringHeader("File Link", webViewLink);
+       				message.setStringHeader("webViewLink", webViewLink);
        			} catch (XQMessageException e) {
        				// TODO Auto-generated catch block
        				e.printStackTrace();
@@ -247,8 +253,8 @@ public class GoogleSlides extends AbstractSFCServiceImpl {
 	            _ctx.addIncomingToOutbox();
 	            return;
 	        }
-	        presentationId = createPresentation(driveService, folderId, presentationName);
-	        createSlides(slidesService, sheetsService, presentationName, presentationId, applicationName, dataType, dataLocation, sheetRange);
+	        presentationId = createPresentation(driveService, folderId, productName);
+	        createSlides(slidesService, sheetsService, productName, presentationId, applicationName, dataType, dataLocation, sheetRange);
 	        webViewLink = movePresentation(driveService, slidesService, presentationId, folderId);
 
 		} catch (IOException e1) {
@@ -265,8 +271,7 @@ public class GoogleSlides extends AbstractSFCServiceImpl {
         // get the message from the envelope
         XQMessage message = _envelope.getMessage();
         try {
-				message.setStringHeader("File Link", webViewLink);
-
+				message.setStringHeader("webViewLink", webViewLink);
 		} catch (XQMessageException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -328,9 +333,9 @@ public class GoogleSlides extends AbstractSFCServiceImpl {
 		}
 		return success;
 	}
-   private static String createPresentation(Drive driveService, String folderId, String presentationName) throws IOException {
+   private static String createPresentation(Drive driveService, String folderId, String productName) throws IOException {
         File fileMetadata = new File();
-        fileMetadata.setName(presentationName);
+        fileMetadata.setName(productName + " AI Roadmap");
         fileMetadata.setMimeType("application/vnd.google-apps.presentation");
         //fileMetadata.setParents(Collections.singletonList(folderId));
 
@@ -347,7 +352,7 @@ public class GoogleSlides extends AbstractSFCServiceImpl {
         return slidesService.presentations().get(presentationId).execute();
     }
     
-    private static void createSlides(Slides slidesService, Sheets sheetsService, String presentationName, String presentationId, String applicationName, int dataType, String dataLocation, String sheetRange) throws IOException, GeneralSecurityException { 	
+    private static void createSlides(Slides slidesService, Sheets sheetsService, String presentationName, String presentationId, String productName, int dataType, String dataLocation, String sheetRange) throws IOException, GeneralSecurityException { 	
     	
         Presentation presentation = getPresentation(slidesService, presentationId);
         //Create Cover Page
@@ -434,21 +439,22 @@ public class GoogleSlides extends AbstractSFCServiceImpl {
         
     }
     private  String movePresentation(Drive driveService, Slides slidesService, String presentationId, String folderId) throws IOException {
-		File file = driveService.files().update(presentationId, null).setAddParents(folderId).execute();
+    	 File fileMetadata = new File();
+    	 fileMetadata.setDescription("This is Presentation generated by AI.");
+    	  fileMetadata.setStarred(true);
+
+    	 File file = driveService.files()
+				.update(presentationId, fileMetadata)
+				.setAddParents(folderId)
+	            .setFields("id, webViewLink")
+				.execute();
 
 	    // Get the updated presentation details
 	    com.google.api.services.slides.v1.model.Presentation presentation = slidesService.presentations()
 	            .get(file.getId())
 	            .execute();
 
-//	    Permission permission = new Permission()
-//	    		.setType("user")
-//	    		.setRole("owner")
-//	    		.setEmailAddress("horowitz@aurea.com");
-//	    driveService.permissions().create(presentationId, permission)
-//	    		.setTransferOwnership(true)
-//	    		.execute();
-	    
+	    presentation.getTitle();
 	    // Return the webViewLink of the moved presentation
 	    String webViewLink = file.getWebViewLink();
 	    return webViewLink;

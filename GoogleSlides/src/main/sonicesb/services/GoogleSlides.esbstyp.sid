@@ -47,11 +47,6 @@
                        type="init"
                        value="FolderId"/>
             <parameter datatype="string"
-                       name="ApplicationName"
-                       ref="false"
-                       type="init"
-                       value="ApplicationName"/>
-            <parameter datatype="string"
                        name="SecurityFilePath"
                        ref="false"
                        type="init"

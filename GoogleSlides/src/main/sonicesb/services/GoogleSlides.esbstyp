@@ -5,20 +5,17 @@
 	        <stringParam name="FolderId" required="true">
 	            <default edittable="true" editAsRef="false">FolderId</default>
 	        </stringParam>
-	        <stringParam name="ApplicationName" required="true">
-	            <default edittable="true" editAsRef="false">ApplicationName</default>
-	        </stringParam>
 	        <stringParam name="SecurityFilePath" required="true">
 	            <default edittable="true" editAsRef="false">credentials.json</default>
 	        </stringParam>
 	    </init>
     	<runtime>
-    	    <stringParam name="PresentationName"></stringParam>
     	    <stringParam name="DataLocation"></stringParam>
     	    <stringParam name="DataType"></stringParam>
     	    <stringParam name="SheetRange"></stringParam>
     	    <stringParam name="delete"></stringParam>
     	    <stringParam name="TemplateName"></stringParam>
+    	    <stringParam name="ProductName"></stringParam>
     	</runtime>
 	</validParams>	
 	<classLoading>
